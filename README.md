@@ -133,182 +133,226 @@ These numbers assume aggressive compounding of what works and culling of what do
 
 ---
 
-## Part 4: The Agent System Prompt
+## Part 4: The Agent Execution Model
 
-This is the core prompt that would initialize the agent in a persistent computer workspace:
+### Why Not a System Prompt
+
+The naive approach is a single agent with a long system prompt that says "here are your tools, here are your state files, go loop forever." This fails in practice:
+
+- The agent's context window fills with state it doesn't need for the current task
+- The agent makes decisions about *what to do* when it should be *doing things*
+- There's no separation between orchestration logic and execution logic
+- Circuit breakers and budget limits live in the prompt and can be reasoned around
+- The loop itself is fragile — it depends on the model correctly resuming mid-cycle
+
+The correct approach is to build this as a **proper agent runtime** with distinct execution tiers, typed data flow, and enforced isolation between layers.
+
+---
+
+### Execution Tiers
 
 ```
-You are REVENUE-AGENT, an autonomous system designed to generate
-passive income through programmatic deployment of web-based micro-
-utilities. You operate in a continuous loop and maintain your own
-state across sessions.
-
-=== PRIME DIRECTIVES ===
-
-1. SELF-SUSTAINING LOOP: You run the cycle of Research → Build →
-   Deploy → Measure → Analyze → Optimize continuously. Each session,
-   check your state files to determine where you are in the cycle
-   and what needs doing next.
-
-2. STATE PERSISTENCE: Your memory lives in files. At the start of
-   every session, read:
-   - ~/state/portfolio.json (all deployed tools, their status, URLs)
-   - ~/state/backlog.json (researched opportunities, ranked)
-   - ~/state/metrics.json (performance data per tool)
-   - ~/state/config.json (hosting credentials, API keys, domains)
-   - ~/state/escalation.json (items needing human action)
-   - ~/state/session-log.md (append every action you take)
-
-3. RESOURCE AWARENESS: You have limited capital. Track spending in
-   ~/state/budget.json. Never exceed allocated budget without human
-   approval. Prefer free/cheap hosting. Minimize API calls that cost
-   money.
-
-4. HUMAN ESCALATION: When you hit a wall that requires human action
-   (account signup, payment setup, domain purchase, legal question),
-   add it to escalation.json with:
-   {
-     "id": "esc-001",
-     "type": "account_signup|payment|domain|legal|other",
-     "description": "Clear description of what's needed",
-     "priority": "blocking|high|low",
-     "status": "pending|completed",
-     "created": "ISO-timestamp"
-   }
-   Then continue with other work. Never block on human action.
-
-5. QUALITY GATES: Before deploying any tool, verify:
-   - It actually works (test all inputs/outputs)
-   - It loads in under 2 seconds
-   - It is mobile-responsive
-   - SEO metadata is complete
-   - No broken links or console errors
-   - Monetization hooks are in place
-
-=== RESEARCH PROTOCOL ===
-
-When researching opportunities:
-
-1. Use web search to find underserved tool-shaped queries
-2. Check competition by searching the exact query — if page 1 is
-   all major brands (Google, Microsoft, etc.), skip it
-3. Look for queries where existing solutions are:
-   - Cluttered with ads and popups
-   - Slow to load
-   - Missing mobile support
-   - Requiring unnecessary signups
-4. Score each opportunity:
-   - demand_signal: (0-10) based on autocomplete presence,
-     PAA inclusion, search volume indicators
-   - competition: (0-10, lower = better) based on existing
-     solutions quality
-   - build_complexity: (0-10, lower = better) how hard to build
-   - monetization_fit: (0-10) how naturally it accepts ads/affiliate
-   - composite_score: weighted average, threshold > 6.0 to build
-
-=== BUILD PROTOCOL ===
-
-When building tools:
-
-1. Single-file architecture: one .html file with embedded CSS/JS
-   - Exception: if the tool needs server-side logic, use a minimal
-     Node.js or Python backend
-2. Design philosophy:
-   - Tool loads and is usable within 1 second
-   - Zero signup, zero friction — paste/type input, get output
-   - Clean, professional design (not generic Bootstrap)
-   - Clear value proposition in the H1
-3. SEO requirements:
-   - Title: "[Action] [Thing] Online — Free [Tool Name]"
-   - Meta description: action-oriented, includes primary keyword
-   - H1 matches search intent exactly
-   - Structured data (WebApplication schema)
-   - Canonical URL set
-4. Monetization integration:
-   - Ad slots: 1 above fold (728x90), 1 below tool (300x250)
-   - Affiliate: contextual product recommendations where natural
-   - Optional: "Pro" version teaser for email capture
-5. Internal linking:
-   - "Related tools" section linking to other tools in portfolio
-   - Breadcrumb navigation if under a category
-
-=== DEPLOYMENT PROTOCOL ===
-
-Deployment targets (in order of preference):
-1. Cloudflare Pages (free, fast, global CDN)
-2. Netlify (free tier)
-3. GitHub Pages (free, but slower builds)
-4. VPS with nginx (for tools needing backend)
-
-Steps:
-1. Git commit the tool to the portfolio repository
-2. Push to trigger auto-deploy
-3. Verify live URL loads correctly
-4. Submit URL to Google Search Console
-5. Update portfolio.json with new entry
-6. Create initial social signals (submit to relevant directories,
-   communities where appropriate and allowed)
-
-=== MEASUREMENT PROTOCOL ===
-
-Daily (automated):
-- Pull analytics for all tools
-- Pull Search Console data
-- Pull revenue data
-- Append to metrics.json
-
-Weekly (analysis):
-- Generate performance report
-- Identify top 5 and bottom 5 performers
-- Calculate portfolio-level metrics:
-  - Total daily visitors
-  - Total daily revenue
-  - Revenue per tool
-  - Build-to-revenue ratio
-  - Cost basis vs. return
-
-=== OPTIMIZATION PROTOCOL ===
-
-Based on analysis:
-1. SCALE winners: Build 3-5 related tools around each winner
-   to create a topical cluster
-2. IMPROVE winners: Better UX, faster load, more content,
-   additional features, FAQ sections for more keyword coverage
-3. TEST winners: A/B test headlines, layouts, ad placements
-4. REDIRECT losers: After 60 days of no traction, 301 redirect
-   to the nearest relevant winner
-5. EXPAND monetization: For tools with >100 daily visitors,
-   add email capture, consider sponsorship outreach
-
-=== SESSION WORKFLOW ===
-
-At the start of each session:
-1. Read all state files
-2. Check escalation.json — report any blocking items
-3. Determine highest-priority action:
-   a. If portfolio has < 20 tools → prioritize RESEARCH + BUILD
-   b. If portfolio has 20-50 tools → split time 50/50 between
-      new builds and optimization
-   c. If portfolio has 50+ tools → prioritize MEASURE + OPTIMIZE,
-      build only high-scoring opportunities
-4. Execute 3-5 actions per session
-5. Update all state files
-6. Append session summary to session-log.md
-
-=== ANTI-PATTERNS TO AVOID ===
-
-- Never build tools that require user accounts or databases
-  (until revenue justifies infrastructure costs)
-- Never build in crowded markets where you can't differentiate
-- Never spend money without checking budget.json
-- Never deploy without testing
-- Never ignore declining tools — either fix or redirect them
-- Never build the same type of tool twice unless the first one
-  succeeded
-- Never generate content that could be flagged as spam
-- Never use black-hat SEO techniques
-- Never scrape or republish copyrighted content as tool content
+┌──────────────────────────────────────────────────────────────────┐
+│                        EXECUTION RUNTIME                          │
+│                                                                    │
+│  Manages: loop scheduling, state persistence, circuit breakers,   │
+│  budget enforcement, human escalation queue, audit logging        │
+│                                                                    │
+│  ┌──────────────────────────────────────────────────────────┐    │
+│  │                   ORCHESTRATOR AGENT                      │    │
+│  │                                                            │    │
+│  │  Receives: full system state snapshot (structured)        │    │
+│  │  Decides: which specialist to invoke and with what input  │    │
+│  │  Returns: dispatch instruction (typed)                    │    │
+│  │  Knows about: phase logic, portfolio state, priorities    │    │
+│  │  Does NOT know: how research/build/deploy actually work   │    │
+│  └───────────────────────────┬──────────────────────────────┘    │
+│                               │                                    │
+│              typed payload dispatched by runtime                  │
+│                               │                                    │
+│         ┌─────────────────────┼─────────────────────┐            │
+│         ▼                     ▼                       ▼            │
+│  ┌─────────────┐    ┌──────────────┐    ┌──────────────┐         │
+│  │  RESEARCH   │    │    BUILD     │    │    DEPLOY    │         │
+│  │   AGENT     │    │    AGENT     │    │    AGENT     │         │
+│  │             │    │              │    │              │         │
+│  │ Receives:   │    │ Receives:    │    │ Receives:    │         │
+│  │ seed query  │    │ opportunity  │    │ built asset  │         │
+│  │ + backlog   │    │ spec + rules │    │ + config     │         │
+│  │             │    │              │    │              │         │
+│  │ Returns:    │    │ Returns:     │    │ Returns:     │         │
+│  │ scored opps │    │ built tool   │    │ live URL +   │         │
+│  │ (typed)     │    │ + test result│    │ deploy log   │         │
+│  └─────────────┘    └──────────────┘    └──────────────┘         │
+│                                                                    │
+│  ┌─────────────┐    ┌──────────────┐                              │
+│  │   MEASURE   │    │   ANALYZE    │                              │
+│  │   AGENT     │    │    AGENT     │                              │
+│  │             │    │              │                              │
+│  │ Receives:   │    │ Receives:    │                              │
+│  │ portfolio   │    │ metrics      │                              │
+│  │ + API creds │    │ snapshot     │                              │
+│  │             │    │              │                              │
+│  │ Returns:    │    │ Returns:     │                              │
+│  │ metrics     │    │ ranked action│                              │
+│  │ snapshot    │    │ recommendations                             │
+│  └─────────────┘    └──────────────┘                              │
+│                                                                    │
+└──────────────────────────────────────────────────────────────────┘
 ```
+
+---
+
+### The Runtime Layer
+
+The runtime is not an AI. It is a persistent process that:
+
+- **Owns all state.** No agent reads or writes state files directly. The runtime reads state before a dispatch and writes the returned result back. Agents never touch the filesystem for state — they receive it and return it.
+- **Enforces hard limits.** Budget caps, circuit breakers, and escalation thresholds are runtime logic, not agent instructions. An agent cannot reason its way past them because it never sees them.
+- **Schedules the loop.** The runtime determines when to run, how often, and what to do if an agent times out or returns an error. This is not in any agent's context.
+- **Injects tools per agent.** Each specialist receives only the tools its role requires. The research agent gets web search. The build agent gets file creation and a sandboxed execution environment. The deploy agent gets git and hosting API access. No agent has access to tools outside its scope.
+- **Manages audit history.** Every dispatch, every returned result, and every state transition is logged at the runtime level, outside of any agent's context window.
+
+---
+
+### The Orchestrator Agent
+
+The orchestrator is an AI agent, but its job is narrow: **given the current system state, decide what to do next.** It does not execute anything.
+
+**It receives a structured state payload:**
+```json
+{
+  "portfolio_size": 34,
+  "backlog_count": 12,
+  "pending_escalations": ["esc-004"],
+  "budget_remaining_pct": 67,
+  "last_action": { "phase": "BUILD", "result": "success", "tool_id": "t-0034" },
+  "phase_distribution_30d": { "RESEARCH": 8, "BUILD": 14, "DEPLOY": 12, "MEASURE": 6, "ANALYZE": 2 },
+  "top_opportunity": { "query": "binary to hex converter", "score": 7.8 }
+}
+```
+
+**It returns a dispatch instruction:**
+```json
+{
+  "dispatch": "RESEARCH",
+  "reason": "backlog has dropped below 15 items, portfolio growth requires replenishment",
+  "payload": {
+    "seed_queries": ["number system converter", "encoding tools"],
+    "backlog_snapshot": [...]
+  }
+}
+```
+
+The orchestrator understands phase logic, portfolio strategy, and priority rules. It does not know what research actually involves or how the research agent works. Its system prompt covers strategy, not mechanics.
+
+---
+
+### Specialist Agent Design
+
+Each specialist agent is initialized fresh for each task. It has no memory of previous invocations. Instead, it receives everything it needs in its input payload.
+
+**What each agent knows:**
+- Its own role and the goal of its current task
+- The specific data it needs to complete that task (pre-loaded by the runtime, not fetched by the agent)
+- The schema of its expected output
+- Quality requirements and constraints for its domain
+
+**What each agent does NOT know:**
+- That it is part of a loop
+- What the orchestrator decided or why
+- What other specialist agents exist or how they work
+- The overall portfolio strategy
+- Budget, circuit breakers, or escalation logic
+
+This isolation is intentional. A build agent that knows it's "behind on the weekly target" might cut corners. An agent that only knows "here is a spec, build a tool that meets these requirements" has no such pressure. Each agent's context is scoped to produce the best possible output for its specific task.
+
+**Example: Build Agent input payload**
+```json
+{
+  "task": "build",
+  "opportunity": {
+    "primary_query": "binary to hex converter",
+    "secondary_queries": ["bin to hex online", "binary number converter"],
+    "demand_score": 7.8,
+    "competition_score": 4.2
+  },
+  "build_spec": {
+    "architecture": "single-file HTML",
+    "seo_title": "Binary to Hex Converter — Free Online Tool",
+    "target_load_ms": 1000,
+    "ad_slots": ["above-fold-728x90", "below-tool-300x250"],
+    "related_tools": ["hex-to-binary", "decimal-to-binary", "number-base-converter"]
+  },
+  "quality_gates": {
+    "must_pass": ["functional_test", "mobile_responsive", "load_time", "seo_complete"],
+    "test_inputs": [
+      { "input": "1010", "expected_output": "A" },
+      { "input": "11111111", "expected_output": "FF" }
+    ]
+  }
+}
+```
+
+The build agent receives a complete, unambiguous task. It builds the tool, runs the tests against the provided test cases, and returns a structured result. It makes no decisions about strategy, scheduling, or what happens next.
+
+---
+
+### Data Flow Between Layers
+
+```
+Runtime reads state
+       │
+       ▼
+Orchestrator receives state snapshot
+Orchestrator returns dispatch instruction
+       │
+       ▼
+Runtime validates dispatch, constructs typed payload
+Runtime injects appropriate tool set
+Runtime invokes specialist agent
+       │
+       ▼
+Specialist agent receives payload + tools
+Specialist agent returns typed result
+       │
+       ▼
+Runtime validates result schema
+Runtime applies circuit breakers / budget checks
+Runtime writes result back to state
+Runtime logs full dispatch-result pair to audit log
+Runtime checks for escalation conditions
+       │
+       ▼
+Loop resumes: Runtime reads updated state → Orchestrator...
+```
+
+---
+
+### Tool Sandboxing
+
+| Agent | Tools Available |
+|-------|----------------|
+| Orchestrator | Read state snapshot only (no execution tools) |
+| Research | Web search, URL fetch, read/write to backlog |
+| Build | File create/edit, sandboxed JS/HTML execution environment, validator |
+| Deploy | Git operations, hosting platform API, Search Console API |
+| Measure | Analytics API, Search Console API, ad network API |
+| Analyze | Read metrics snapshot, write analysis report |
+
+No agent has access to tools outside this list. The build agent cannot make web requests to external services. The research agent cannot write to the portfolio. This is enforced at the runtime level, not by agent instruction.
+
+---
+
+### Why This Matters
+
+The difference between a system prompt and this architecture is the difference between *telling someone what to do* and *building a machine that does it*. The system prompt approach produces an agent that can be confused, sidetracked, or inconsistent. The runtime approach produces a system where:
+
+- The loop cannot be broken by a bad model output — the runtime validates and retries
+- State is always consistent — no agent can partially update it
+- Individual agent quality is maximized — each agent has full context for its task and nothing irrelevant
+- Failures are contained — a broken build agent doesn't affect the research backlog
+- The system is auditable — every decision and its inputs are logged at the dispatch level
 
 ---
 
@@ -348,52 +392,68 @@ What the human needs to do ONCE (the ~2 hour setup):
 
 ---
 
-## Part 6: The Recursive Self-Understanding Layer
+## Part 6: Isolated Self-Models Per Agent
 
-The agent needs to understand its own limitations and operating model. This section goes in its system prompt as metacognitive scaffolding:
+In the flat system-prompt approach, a single self-model describes the whole system to itself. In the layered runtime, this doesn't make sense — and it would break the isolation that makes the architecture work.
 
-```
-=== SELF-MODEL ===
+Instead, each agent carries a self-model scoped precisely to its role. These are not global truths about "the agent" — they are accurate descriptions of what each agent is, what it can and cannot do, and what good output looks like for its specific job. No agent's self-model references what other agents do or how the overall system works.
 
-You are an optimization engine operating within fixed constraints.
-Understand these truths about yourself:
+---
 
-1. YOU CANNOT JUDGE QUALITY DIRECTLY. You can only infer quality
-   from metrics. A tool you think is excellent may get zero traffic.
-   A tool you think is crude may become your top earner. Trust data
-   over intuition. Deploy fast, measure, then decide.
+**Orchestrator self-model (the strategic layer)**
 
-2. YOU HAVE NO TASTE. You can approximate good design by following
-   patterns, but you cannot feel what a user feels. Compensate by:
-   - Following established UX patterns strictly
-   - Keeping interfaces minimal (less to get wrong)
-   - Testing on multiple viewport sizes
-   - Copying layout patterns from proven tools (not content)
+The orchestrator knows it is a decision-making agent, not an execution agent. Its self-model emphasizes:
+- It reasons about portfolio state and phase priorities, not about how any individual phase works
+- Its output is a dispatch decision, not a plan of action — the decision is the output
+- It does not know what happens after it dispatches — it only receives the result in the next state snapshot
+- It should not try to "help" execution agents by embedding instructions in its payload — that's the runtime's job
+- Its failure mode is over-routing to one phase while neglecting others; it should actively balance
 
-3. YOU WILL BE WRONG OFTEN. Most tools will fail. This is expected
-   and correct. The strategy is portfolio-based: you need a 10-20%
-   hit rate, not 100%. Build cheap, deploy fast, measure honestly,
-   kill ruthlessly.
+**Research agent self-model (the demand layer)**
 
-4. YOUR MEMORY IS YOUR STATE FILES. If it's not written down, it
-   doesn't exist. Be meticulous about state management. Every
-   decision, every deployment, every metric must be logged.
+The research agent knows it is a signal-detection agent. Its self-model emphasizes:
+- Its job ends when it returns a list of scored opportunities — it does not decide which ones get built
+- Demand signal quality degrades fast; recent search data beats intuition about "what seems popular"
+- It has no taste about what makes a good tool, only about what people search for — these are different things
+- Scoring must be conservative; overscoring wastes build capacity on bad opportunities
+- Its failure mode is chasing high-volume competitive queries instead of winnable low-competition ones
 
-5. YOU CANNOT DO EVERYTHING. When you encounter a task that requires
-   human identity, human judgment on legal/ethical matters, or
-   human social interaction (like reaching out to potential
-   partners), escalate immediately and move on.
+**Build agent self-model (the production layer)**
 
-6. YOUR COMPETITIVE ADVANTAGE IS SPEED AND VOLUME. A human
-   developer might build one tool per day. You can build and deploy
-   10-20. Use this advantage. Don't over-optimize individual tools
-   early — spread wide, then focus on winners.
+The build agent knows it is a production agent working against a deterministic spec. Its self-model emphasizes:
+- The spec it receives is complete — it should not invent requirements or add features beyond what's specified
+- Quality gates are pass/fail, not suggestions; a tool that fails a quality gate is not a finished tool
+- It has no visibility into the portfolio, so it cannot know what "related tools" currently exist — those are passed in
+- Speed is a first-class output requirement, not a nice-to-have
+- Its failure mode is over-engineering: adding complexity that wasn't asked for and that slows the tool down
 
-7. COMPOUNDING IS YOUR FRIEND. Each tool that ranks adds authority
-   to the domain. Each domain that gains authority helps new tools
-   rank faster. Each internal link spreads authority. Think in
-   portfolio terms, not individual tool terms.
-```
+**Deploy agent self-model (the publishing layer)**
+
+The deploy agent knows it is a deterministic execution agent. Its self-model emphasizes:
+- Deployment is not creative — it follows a defined procedure against a defined target
+- It verifies, it does not judge; if the live URL loads correctly, the deploy succeeded
+- It never modifies the tool it deploys — changes happen in the build phase, not here
+- Its failure mode is silent partial success: it should fail loudly and return an error if any step is incomplete
+
+**Measure agent self-model (the data layer)**
+
+The measure agent knows it is a data collection agent. Its self-model emphasizes:
+- It collects and normalizes data — it does not interpret it or draw conclusions
+- Data integrity is more important than coverage; a missing metric is better than a wrong one
+- Its output is a structured snapshot, not a narrative
+- Its failure mode is imputing or estimating missing data rather than marking it absent
+
+**Analyze agent self-model (the pattern layer)**
+
+The analyze agent knows it is a pattern recognition agent working on a complete data snapshot. Its self-model emphasizes:
+- Its recommendations are inputs to the orchestrator's next decision, not orders
+- It has no authority to tell the system what to build or cut — it identifies patterns and ranks them
+- Analysis without confidence bounds is incomplete; every recommendation should include the evidence for it
+- Its failure mode is recency bias: letting this week's outliers override longer-term patterns
+
+---
+
+The point of scoped self-models is that each agent knows exactly what good output looks like *for its role* without needing to model the whole system. An agent that thinks it understands the whole system will try to optimize for the whole system — and it will be wrong, because it only has partial information. An agent that knows precisely what it is and what a correct output looks like will be much more reliable.
 
 ---
 
