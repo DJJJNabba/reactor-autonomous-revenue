@@ -63,27 +63,27 @@ These numbers assume aggressive compounding of what works and culling of what do
 
 ```
 ┌─────────────────────────────────────────────────────┐
-│                  CONTROL LOOP                        │
-│                                                      │
+│                  CONTROL LOOP                       │
+│                                                     │
 │   ┌──────────┐    ┌──────────┐    ┌──────────┐      │
-│   │ RESEARCH │───▶│  BUILD   │───▶│  DEPLOY  │      │
+│   │ RESEARCH │───▶│  BUILD   │───▶│  DEPLOY  │     │
 │   └──────────┘    └──────────┘    └──────────┘      │
-│        ▲                               │             │
-│        │                               ▼             │
+│        ▲                               │            │
+│        │                               ▼            │
 │   ┌──────────┐    ┌──────────┐    ┌──────────┐      │
-│   │ OPTIMIZE │◀───│ ANALYZE  │◀───│ MEASURE  │      │
+│   │ OPTIMIZE │◀───│ ANALYZE  │◀───│ MEASURE  │     │
 │   └──────────┘    └──────────┘    └──────────┘      │
-│                                                      │
+│                                                     │
 │   ┌──────────────────────────────────────────┐      │
 │   │           STATE PERSISTENCE              │      │
 │   │  portfolio.json | metrics.json | log.md  │      │
 │   └──────────────────────────────────────────┘      │
-│                                                      │
+│                                                     │
 │   ┌──────────────────────────────────────────┐      │
 │   │         HUMAN ESCALATION QUEUE           │      │
 │   │   (account signups, payments, approvals) │      │
 │   └──────────────────────────────────────────┘      │
-│                                                      │
+│                                                     │
 └─────────────────────────────────────────────────────┘
 ```
 
@@ -153,25 +153,25 @@ The correct approach is to build this as a **proper agent runtime** with distinc
 
 ```
 ┌──────────────────────────────────────────────────────────────────┐
-│                        EXECUTION RUNTIME                          │
-│                                                                    │
-│  Manages: loop scheduling, state persistence, circuit breakers,   │
-│  budget enforcement, human escalation queue, audit logging        │
-│                                                                    │
-│  ┌──────────────────────────────────────────────────────────┐    │
-│  │                   ORCHESTRATOR AGENT                      │    │
-│  │                                                            │    │
-│  │  Receives: full system state snapshot (structured)        │    │
-│  │  Decides: which specialist to invoke and with what input  │    │
-│  │  Returns: dispatch instruction (typed)                    │    │
-│  │  Knows about: phase logic, portfolio state, priorities    │    │
-│  │  Does NOT know: how research/build/deploy actually work   │    │
-│  └───────────────────────────┬──────────────────────────────┘    │
-│                               │                                    │
-│              typed payload dispatched by runtime                  │
-│                               │                                    │
-│         ┌─────────────────────┼─────────────────────┐            │
-│         ▼                     ▼                       ▼            │
+│                        EXECUTION RUNTIME                         │
+│                                                                  │
+│  Manages: loop scheduling, state persistence, circuit breakers,  │
+│  budget enforcement, human escalation queue, audit logging       │
+│                                                                  │
+│  ┌───────────────────────────────────────────────────────────┐   │
+│  │                   ORCHESTRATOR AGENT                      │   │
+│  │                                                           │   │
+│  │  Receives: full system state snapshot (structured)        │   │
+│  │  Decides: which specialist to invoke and with what input  │   │
+│  │  Returns: dispatch instruction (typed)                    │   │
+│  │  Knows about: phase logic, portfolio state, priorities    │   │
+│  │  Does NOT know: how research/build/deploy actually work   │   │
+│  └────────────────────────────┬──────────────────────────────┘   │
+│                               │                                  │
+│              typed payload dispatched by runtime                 │
+│                               │                                  │
+│         ┌─────────────────────┼─────────────────┐                │
+│         ▼                     ▼                 ▼                │
 │  ┌─────────────┐    ┌──────────────┐    ┌──────────────┐         │
 │  │  RESEARCH   │    │    BUILD     │    │    DEPLOY    │         │
 │  │   AGENT     │    │    AGENT     │    │    AGENT     │         │
@@ -184,20 +184,20 @@ The correct approach is to build this as a **proper agent runtime** with distinc
 │  │ scored opps │    │ built tool   │    │ live URL +   │         │
 │  │ (typed)     │    │ + test result│    │ deploy log   │         │
 │  └─────────────┘    └──────────────┘    └──────────────┘         │
-│                                                                    │
-│  ┌─────────────┐    ┌──────────────┐                              │
-│  │   MEASURE   │    │   ANALYZE    │                              │
-│  │   AGENT     │    │    AGENT     │                              │
-│  │             │    │              │                              │
-│  │ Receives:   │    │ Receives:    │                              │
-│  │ portfolio   │    │ metrics      │                              │
-│  │ + API creds │    │ snapshot     │                              │
-│  │             │    │              │                              │
-│  │ Returns:    │    │ Returns:     │                              │
-│  │ metrics     │    │ ranked action│                              │
-│  │ snapshot    │    │ recommendations                             │
-│  └─────────────┘    └──────────────┘                              │
-│                                                                    │
+│                                                                  │
+│  ┌─────────────┐    ┌──────────────┐                             │
+│  │   MEASURE   │    │   ANALYZE    │                             │
+│  │   AGENT     │    │    AGENT     │                             │
+│  │             │    │              │                             │
+│  │ Receives:   │    │ Receives:    │                             │
+│  │ portfolio   │    │ metrics      │                             │
+│  │ + API creds │    │ snapshot     │                             │
+│  │             │    │              │                             │
+│  │ Returns:    │    │ Returns:     │                             │
+│  │ metrics     │    │ ranked action│                             │
+│  │ snapshot    │    │ recommendations                            │
+│  └─────────────┘    └──────────────┘                             │
+│                                                                  │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
